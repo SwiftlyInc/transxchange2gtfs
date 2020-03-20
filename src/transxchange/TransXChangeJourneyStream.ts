@@ -1,14 +1,7 @@
-import {
-  DaysOfWeek,
-  Holiday,
-  OperatingProfile,
-  Service, StopActivity,
-  TimingLink,
-  TransXChange
-} from "./TransXChange";
+import {DaysOfWeek, Holiday, OperatingProfile, Service, StopActivity, TimingLink, TransXChange} from "./TransXChange";
 import {Transform, TransformCallback} from "stream";
 import autobind from "autobind-decorator";
-import {LocalDate, LocalTime, Duration, DateTimeFormatter} from "js-joda";
+import {ChronoUnit, DateTimeFormatter, Duration, LocalDate, LocalTime} from "js-joda";
 import {ATCOCode} from "../reference/NaPTAN";
 
 /**
@@ -29,8 +22,10 @@ export class TransXChangeJourneyStream extends Transform {
    * Generate a journey
    */
   public _transform(schedule: TransXChange, encoding: string, callback: TransformCallback): void {
-
     for (const vehicle of schedule.VehicleJourneys) {
+      // if (vehicle.ServiceRef === 'SER3') {
+      //   console.log(vehicle)
+      // }
       const service = schedule.Services[vehicle.ServiceRef];
       const journeyPattern = service.StandardService[vehicle.JourneyPatternRef];
       const sections = journeyPattern.Sections.reduce(
@@ -41,10 +36,35 @@ export class TransXChangeJourneyStream extends Transform {
       if (sections.length > 0) {
         const calendar = this.getCalendar(vehicle.OperatingProfile, schedule.Services[vehicle.ServiceRef]);
         const stops = this.getStopTimes(sections, vehicle.DepartureTime);
-        const trip = {id: this.tripId++, shortName: service.ServiceDestination, direction: journeyPattern.Direction};
+        const days: DaysOfWeek = vehicle.OperatingProfile.RegularDayType === "HolidaysOnly"
+            ? [0, 0, 0, 0, 0, 0, 0]
+            : this.mergeDays(vehicle.OperatingProfile.RegularDayType);
+        // Old way of constructing trip IDs by incrementation, starting at 1
+        //
+        // const trip = {
+        //   id: this.tripId++,
+        //   shortName: service.ServiceDestination,
+        //   direction: journeyPattern.Direction
+        // };
+
+        // new way of constructing trip IDs by combining service code, journey code, and private code
+        const trip = {
+          id: "\"" + vehicle.TicketMachineServiceCode + "-" +
+              vehicle.TicketMachineJourneyCode + "-" +
+              vehicle.PrivateCode.replace(/:/g, "") + "\"",
+          shortName: service.ServiceDestination,
+          direction: journeyPattern.Direction
+        };
         const route = vehicle.ServiceRef;
 
-        this.push({calendar, stops, trip, route});
+        let res = schedule.Routes.Route.filter((r: any) => {
+          return journeyPattern.RouteRef === r.$.id || (r.PrivateCode && journeyPattern.RouteRef === r.PrivateCode[0]);
+        });
+
+        const shapeId = res[0].RouteSectionRef[0];
+        const blockId = vehicle.OperationalBlockNumber;
+
+        this.push({calendar, stops, trip, route, shapeId, blockId});
       }
     }
 
@@ -133,33 +153,155 @@ export class TransXChangeJourneyStream extends Transform {
     ].join("_");
   }
 
-  private getStopTimes(links: TimingLink[], departureTime: LocalTime): StopTime[] {
-    const stops = [{
-      stop: links[0].From.StopPointRef,
-      arrivalTime: departureTime.format(DateTimeFormatter.ofPattern("HH:mm:ss")),
-      departureTime: departureTime.format(DateTimeFormatter.ofPattern("HH:mm:ss")),
-      pickup: true,
-      dropoff: false,
-      exactTime: links[0].From.TimingStatus === "PTP"
-    }];
+  // TODO: this is the original function getStopTimes
+  //
+  // private getStopTimes(links: TimingLink[], departureTime: LocalTime): StopTime[] {
+  //   const stops = [{
+  //     stop: links[0].From.StopPointRef,
+  //     arrivalTime: departureTime.format(DateTimeFormatter.ofPattern("HH:mm:ss")),
+  //     departureTime: departureTime.format(DateTimeFormatter.ofPattern("HH:mm:ss")),
+  //     pickup: true,
+  //     dropoff: false,
+  //     exactTime: links[0].From.TimingStatus === "PTP" || links[0].From.TimingStatus === "TIP"
+  //   }];
+  //
+  //   let lastDepartureTime = Duration.between(LocalTime.parse("00:00"), departureTime);
+  //
+  //   for (const link of links) {
+  //     const arrivalTime = lastDepartureTime.plusDuration(link.RunTime);
+  //     // This originally only adds up wait times for "to" stops:
+  //     lastDepartureTime = link.From.WaitTime ? arrivalTime.plusDuration(link.From.WaitTime) : arrivalTime;
+  //     //
+  //     // Using this function in order to take into account wait times at the "from" stop, plus the
+  //     // lastDepartureTime = TransXChangeJourneyStream.getDepartureTime(arrivalTime, link);
+  //
+  //     stops.push({
+  //       stop: link.To.StopPointRef,
+  //       arrivalTime: this.getTime(arrivalTime),
+  //       departureTime: this.getTime(lastDepartureTime),
+  //       pickup: link.To.Activity === StopActivity.PickUp || link.To.Activity === StopActivity.PickUpAndSetDown,
+  //       dropoff: link.To.Activity === StopActivity.SetDown || link.To.Activity === StopActivity.PickUpAndSetDown,
+  //       exactTime: link.To.TimingStatus === "PTP" || link.To.TimingStatus === "TIP"
+  //     });
+  //   }
+  //
+  //   return stops;
+  // }
 
-    let lastDepartureTime = Duration.between(LocalTime.parse("00:00"), departureTime);
+  private getStopTimes(timingLinks: TimingLink[], departureTime: LocalTime): StopTime[] {
+    const stopTimes = [];
+    let previousTimingLink: TimingLink = timingLinks[0];
+    let previousDepartureTime = Duration.between(LocalTime.parse("00:00"), departureTime);
+    let durationZero = Duration.of(0, ChronoUnit.SECONDS);
 
-    for (const link of links) {
-      const arrivalTime = lastDepartureTime.plusDuration(link.RunTime);
-      lastDepartureTime = link.To.WaitTime ? arrivalTime.plusDuration(link.To.WaitTime) : arrivalTime;
+    console.log('timingLinks length: ', timingLinks.length);
+    console.log('checking timing links...');
 
-      stops.push({
-        stop: link.To.StopPointRef,
-        arrivalTime: this.getTime(arrivalTime),
-        departureTime: this.getTime(lastDepartureTime),
-        pickup: link.To.Activity === StopActivity.PickUp || link.To.Activity === StopActivity.PickUpAndSetDown,
-        dropoff: link.To.Activity === StopActivity.SetDown || link.To.Activity === StopActivity.PickUpAndSetDown,
-        exactTime: link.To.TimingStatus === "PTP"
-      });
+    for (let i in timingLinks) {
+      const currentTimingLink = timingLinks[i];
+      console.log('currentTimingLink: ', currentTimingLink, '\n');
+
+      if (i === "0") {
+        // Add wait time to the first departure time if available
+        let waitTime = currentTimingLink.From.WaitTime || durationZero;
+        const departureTime = previousDepartureTime.plusDuration(waitTime);
+
+        let stopTime = {
+          stop: currentTimingLink.From.StopPointRef,
+          arrivalTime: this.getTime(departureTime),
+          departureTime: this.getTime(departureTime),
+          pickup: true,
+          dropoff: false,
+          exactTime: currentTimingLink.From.TimingStatus === "PTP" || currentTimingLink.From.TimingStatus === "TIP"
+        };
+
+        console.log('adding_first_stop_time: ', stopTime, '\n');
+        stopTimes.push(stopTime);
+      } else {
+        // Current arrival time is the previous departure time + previous run time + previous wait time if any
+        const arrivalTime = previousDepartureTime
+            .plusDuration(previousTimingLink.RunTime)
+            .plusDuration(previousTimingLink.To.WaitTime || durationZero);
+
+        // NOTE: this is really the current departure time being tracked by previousDepartureTime
+        // Current departure time + current wait time
+        previousDepartureTime = arrivalTime
+            .plusDuration(currentTimingLink.From.WaitTime || durationZero);
+
+        let stopTime = {
+          stop: previousTimingLink.To.StopPointRef,
+          arrivalTime: this.getTime(arrivalTime),
+          departureTime: this.getTime(previousDepartureTime),
+          pickup: previousTimingLink.To.Activity === StopActivity.PickUp || previousTimingLink.To.Activity === StopActivity.PickUpAndSetDown,
+          dropoff: previousTimingLink.To.Activity === StopActivity.SetDown || previousTimingLink.To.Activity === StopActivity.PickUpAndSetDown,
+          exactTime: previousTimingLink.To.TimingStatus === "PTP" || previousTimingLink.To.TimingStatus === "TIP"
+        };
+
+        console.log('adding_next_stop_time: ', stopTime, '\n');
+        stopTimes.push(stopTime);
+      }
+
+      previousTimingLink = currentTimingLink;
     }
 
-    return stops;
+    let lastTimingLink = timingLinks[timingLinks.length-1];
+
+    // Current arrival time is the previous departure time + previous run time + previous wait time if any
+    const arrivalTime = previousDepartureTime
+        .plusDuration(previousTimingLink.RunTime)
+        .plusDuration(previousTimingLink.To.WaitTime || durationZero);
+
+    // NOTE: this is really the current departure time being tracked by previousDepartureTime
+    // Current departure time + current wait time
+    previousDepartureTime = arrivalTime
+        .plusDuration(lastTimingLink.From.WaitTime || durationZero);
+
+    let lastStopTime = {
+      stop: lastTimingLink.To.StopPointRef,
+      arrivalTime: this.getTime(arrivalTime),
+      departureTime: this.getTime(previousDepartureTime),
+      pickup: lastTimingLink.To.Activity === StopActivity.PickUp || lastTimingLink.To.Activity === StopActivity.PickUpAndSetDown,
+      dropoff: lastTimingLink.To.Activity === StopActivity.SetDown || lastTimingLink.To.Activity === StopActivity.PickUpAndSetDown,
+      exactTime: lastTimingLink.To.TimingStatus === "PTP" || lastTimingLink.To.TimingStatus === "TIP"
+    };
+
+    console.log('adding_last_stop_time: ', lastStopTime, '\n');
+    stopTimes.push(lastStopTime);
+
+    console.log('stopTimes.length: ', stopTimes.length);
+
+    return stopTimes;
+  }
+
+  private static getDepartureTime(arrivalTime: Duration, link: TimingLink): Duration {
+    if (link.From.StopPointRef === '1900HA030290') {
+      console.log("----------------------------------------------------------------");
+      console.log("arrival [init]:", arrivalTime);
+    }
+
+    if (link.From.WaitTime) {
+      arrivalTime = arrivalTime.plusDuration(link.From.WaitTime);
+
+      if (link.From.StopPointRef === '1900HA030290') {
+        console.log("link.From.WaitTime:", link.From.WaitTime);
+        console.log("arrival+from_wait-time:", arrivalTime);
+      }
+    }
+
+    if (link.To.WaitTime) {
+      arrivalTime = arrivalTime.plusDuration(link.To.WaitTime);
+
+      if (link.From.StopPointRef === '1900HA030290') {
+        console.log("link.To.WaitTime:", link.To.WaitTime);
+        console.log("arrival+to_wait-time:", arrivalTime);
+      }
+    }
+
+    if (link.From.StopPointRef === '1900HA030290') {
+      console.log("arrival [final]:", arrivalTime);
+    }
+
+    return arrivalTime;
   }
 
   private getTime(time: Duration): string {
@@ -172,15 +314,48 @@ export class TransXChangeJourneyStream extends Transform {
 
 export type BankHolidays = Record<Holiday, LocalDate[]>;
 
+// export interface TransXChangeJourney {
+//   calendar: JourneyCalendar
+//   trip: {
+//     id: number,
+//     shortName: string,
+//     direction: "inbound" | "outbound"
+//   }
+//   route: string,
+//   stops: StopTime[],
+//   shapeId: string,
+//   blockId: string
+// }
+//
+// export interface JourneyCalendar {
+//   id: number,
+//   startDate: LocalDate,
+//   endDate: LocalDate,
+//   days: DaysOfWeek,
+//   includes: LocalDate[],
+//   excludes: LocalDate[]
+// }
+//
+// export interface StopTime {
+//   stop: ATCOCode,
+//   arrivalTime: string,
+//   departureTime: string,
+//   pickup: boolean,
+//   dropoff: boolean,
+//   exactTime: boolean
+// }
+
 export interface TransXChangeJourney {
   calendar: JourneyCalendar
   trip: {
-    id: number,
+    id: string,
     shortName: string,
     direction: "inbound" | "outbound"
   }
   route: string,
-  stops: StopTime[]
+  stops: StopTime[],
+  shapeId: string,
+  blockId: string
 }
 
 export interface JourneyCalendar {

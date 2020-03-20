@@ -18,6 +18,7 @@ import {TripsStream} from "./gtfs/TripsStream";
 import {StopTimesStream} from "./gtfs/StopTimesStream";
 import * as fs from "fs";
 import {TransfersStream} from "./gtfs/TransfersStream";
+import {ShapesStream} from "./gtfs/ShapesStream";
 
 const exec = promisify(require("child_process").exec);
 
@@ -46,7 +47,8 @@ export class Container {
         "agency.txt": transxchange.pipe(new AgencyStream()),
         "routes.txt": transxchange.pipe(new RoutesStream()),
         "transfers.txt": transxchange.pipe(new TransfersStream(naptanIndex, locationIndex)),
-        "stops.txt": transxchange.pipe(new StopsStream(naptanIndex))
+        "stops.txt": transxchange.pipe(new StopsStream(naptanIndex)),
+        "shapes.txt": transxchange.pipe(new ShapesStream())
       }
     );
   }

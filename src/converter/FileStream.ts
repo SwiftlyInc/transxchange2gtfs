@@ -24,7 +24,7 @@ export class FileStream extends Transform {
   public async _transform(file: string, encoding: string, callback: TransformCallback): Promise<void> {
     const extension = parse(file).ext.toLowerCase();
 
-    console.log("Processing " + file);
+    console.log("Processing: " + file);
 
     if (extension  === ".xml") {
       await this.readFile(file);
@@ -40,6 +40,7 @@ export class FileStream extends Transform {
   }
 
   private async readFile(file: string): Promise<void> {
+    console.log("Processing:", file);
     const contents = await readFile(file, "utf8");
 
     this.push(contents);

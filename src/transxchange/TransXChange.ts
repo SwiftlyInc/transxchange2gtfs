@@ -9,7 +9,9 @@ export interface TransXChange {
   JourneySections: JourneyPatternSections,
   Operators: Operators,
   Services: Services,
-  VehicleJourneys: VehicleJourney[]
+  VehicleJourneys: VehicleJourney[],
+  Routes: any,
+  RouteLinks: RouteLink[]
 }
 
 /**
@@ -31,8 +33,10 @@ export interface StopPoint {
   LocalityName: string,
   LocalityQualifier: string
   Location: {
-    Latitude: number,
-    Longitude: number
+    Latitude: number | undefined,
+    Longitude: number | undefined,
+    Easting: number | undefined,
+    Northing: number | undefined,
   }
 }
 
@@ -104,7 +108,9 @@ export interface Service {
   RegisteredOperatorRef: OperatorID,
   Description: string,
   Mode: Mode,
+  ServiceOrigin: string,
   ServiceDestination: string,
+  Via: string,
   StandardService: JourneyPatterns,
   OperatingProfile: OperatingProfile | undefined
 }
@@ -119,6 +125,7 @@ export type JourneyPatterns = Record<JourneyPatternID, JourneyPattern>;
  */
 export interface JourneyPattern {
   Direction: "inbound" | "outbound",
+  RouteRef: string,
   Sections: JourneyPatternSectionID[],
 }
 
@@ -153,16 +160,28 @@ export enum Mode {
   Tram = "tram"
 }
 
+export interface RouteLink {
+  Id: string,
+  Latitude: number | undefined,
+  Longitude: number | undefined,
+  Easting: number | undefined,
+  Northing: number | undefined,
+}
+
 /**
  * Vehicle journeys
  */
 export interface VehicleJourney {
+  PrivateCode: string
   OperatingProfile: OperatingProfile,
   ServiceRef: ServiceCode,
   LineRef: string,
   JourneyPatternRef: string,
   DepartureTime: LocalTime,
-  VehicleJourneyCode: string
+  VehicleJourneyCode: string,
+  OperationalBlockNumber: string,
+  TicketMachineServiceCode: string,
+  TicketMachineJourneyCode: string
 }
 
 export interface OperatingProfile {
