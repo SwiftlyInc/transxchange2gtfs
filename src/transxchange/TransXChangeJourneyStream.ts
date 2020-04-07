@@ -194,12 +194,12 @@ export class TransXChangeJourneyStream extends Transform {
     let previousDepartureTime = Duration.between(LocalTime.parse("00:00"), departureTime);
     let durationZero = Duration.of(0, ChronoUnit.SECONDS);
 
-    console.log('timingLinks length: ', timingLinks.length);
-    console.log('checking timing links...');
+    // console.log('timingLinks length: ', timingLinks.length);
+    // console.log('checking timing links...');
 
     for (let i in timingLinks) {
       const currentTimingLink = timingLinks[i];
-      console.log('currentTimingLink: ', currentTimingLink, '\n');
+      // console.log('currentTimingLink: ', currentTimingLink, '\n');
 
       if (i === "0") {
         // Add wait time to the first departure time if available
@@ -215,7 +215,7 @@ export class TransXChangeJourneyStream extends Transform {
           exactTime: currentTimingLink.From.TimingStatus === "PTP" || currentTimingLink.From.TimingStatus === "TIP"
         };
 
-        console.log('adding_first_stop_time: ', stopTime, '\n');
+        // console.log('adding_first_stop_time: ', stopTime, '\n');
         stopTimes.push(stopTime);
       } else {
         // Current arrival time is the previous departure time + previous run time + previous wait time if any
@@ -237,7 +237,7 @@ export class TransXChangeJourneyStream extends Transform {
           exactTime: previousTimingLink.To.TimingStatus === "PTP" || previousTimingLink.To.TimingStatus === "TIP"
         };
 
-        console.log('adding_next_stop_time: ', stopTime, '\n');
+        // console.log('adding_next_stop_time: ', stopTime, '\n');
         stopTimes.push(stopTime);
       }
 
@@ -265,41 +265,41 @@ export class TransXChangeJourneyStream extends Transform {
       exactTime: lastTimingLink.To.TimingStatus === "PTP" || lastTimingLink.To.TimingStatus === "TIP"
     };
 
-    console.log('adding_last_stop_time: ', lastStopTime, '\n');
+    // console.log('adding_last_stop_time: ', lastStopTime, '\n');
     stopTimes.push(lastStopTime);
 
-    console.log('stopTimes.length: ', stopTimes.length);
+    // console.log('stopTimes.length: ', stopTimes.length);
 
     return stopTimes;
   }
 
   private static getDepartureTime(arrivalTime: Duration, link: TimingLink): Duration {
-    if (link.From.StopPointRef === '1900HA030290') {
-      console.log("----------------------------------------------------------------");
-      console.log("arrival [init]:", arrivalTime);
-    }
+    // if (link.From.StopPointRef === '1900HA030290') {
+    //   console.log("----------------------------------------------------------------");
+    //   console.log("arrival [init]:", arrivalTime);
+    // }
 
     if (link.From.WaitTime) {
       arrivalTime = arrivalTime.plusDuration(link.From.WaitTime);
 
-      if (link.From.StopPointRef === '1900HA030290') {
-        console.log("link.From.WaitTime:", link.From.WaitTime);
-        console.log("arrival+from_wait-time:", arrivalTime);
-      }
+      // if (link.From.StopPointRef === '1900HA030290') {
+      //   console.log("link.From.WaitTime:", link.From.WaitTime);
+      //   console.log("arrival+from_wait-time:", arrivalTime);
+      // }
     }
 
     if (link.To.WaitTime) {
       arrivalTime = arrivalTime.plusDuration(link.To.WaitTime);
 
-      if (link.From.StopPointRef === '1900HA030290') {
-        console.log("link.To.WaitTime:", link.To.WaitTime);
-        console.log("arrival+to_wait-time:", arrivalTime);
-      }
+      // if (link.From.StopPointRef === '1900HA030290') {
+      //   console.log("link.To.WaitTime:", link.To.WaitTime);
+      //   console.log("arrival+to_wait-time:", arrivalTime);
+      // }
     }
 
-    if (link.From.StopPointRef === '1900HA030290') {
-      console.log("arrival [final]:", arrivalTime);
-    }
+    // if (link.From.StopPointRef === '1900HA030290') {
+    //   console.log("arrival [final]:", arrivalTime);
+    // }
 
     return arrivalTime;
   }
