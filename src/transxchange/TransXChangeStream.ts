@@ -310,9 +310,7 @@ export class TransXChangeStream extends Transform {
   }
 
   private getVehicleJourney(vehicle: any, index: JourneyPatternIndex, services: Services): VehicleJourney {
-    if (vehicle.PrivateCode[0] === '0H1MFBLUE:O:4:1') {
-      console.log(vehicle.OperatingProfile[0].RegularDayType[0].DaysOfWeek[0]);
-    }
+    // console.log(vehicle);
 
     return {
       PrivateCode: vehicle.PrivateCode[0],
