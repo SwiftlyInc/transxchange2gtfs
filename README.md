@@ -1,3 +1,11 @@
+## Swiftly PSA
+
+This is the current converter used for our current UK agencies. Before reading the original instructions below for usage and compilation, engineers should check out the `roberto/current_with_stop_times` branch and use that - **do not use `master`**.
+
+The `roberto/current_with_stop_times` branch contains all the current work used to translate TXC files from Go South Coast and Mersey Travels. It is behind `master` by several commits.
+
+----
+
 ![transxchange2gtfs](logo.png)
 
 [![Travis](https://img.shields.io/travis/planarnetwork/transxchange2gtfs.svg?style=flat-square)](https://travis-ci.org/planarnetwork/transxchange2gtfs) ![npm](https://img.shields.io/npm/v/transxchange2gtfs.svg?style=flat-square) ![David](https://img.shields.io/david/planarnetwork/transxchange2gtfs.svg?style=flat-square)
