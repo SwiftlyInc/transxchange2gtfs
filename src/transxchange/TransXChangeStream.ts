@@ -73,22 +73,6 @@ export class TransXChangeStream extends Transform {
 
         return rs.RouteLink.map((rl: any) => {
           return rl.Track ? rl.Track[0].Mapping[0].Location.map((location: any) => {
-            // const routeLink: RouteLink = {
-            //   Id: id,
-            //   Latitude: location.Latitude ?
-            //       location.Latitude[0] :
-            //       (location.Translation ?
-            //           Number(location.Translation[0].Latitude[0]) :
-            //           undefined),
-            //   Longitude: location.Longitude ?
-            //       location.Longitude[0] :
-            //       (location.Translation ?
-            //           Number(location.Translation[0].Longitude[0]) :
-            //           undefined),
-            //   Easting: location.Easting ? location.Easting[0] : (location.Translation ? Number(location.Translation[0].Easting[0]) : undefined),
-            //   Northing: location.Northing ? location.Northing[0] : (location.Translation ? Number(location.Translation[0].Northing[0]) : undefined)
-            // };
-
             const latLon = this.getLocation(location);
 
             const routeLink: RouteLink = {
@@ -238,11 +222,6 @@ export class TransXChangeStream extends Transform {
   }
 
   private getOperators(index: Operators, operator: any): Operators {
-    // if (operator.OperatorNameOnLicence && operator.OperatorNameOnLicence[0]) {
-    //   console.log("operator:", operator.OperatorNameOnLicence[0]);
-    //   console.log("operator:", typeof operator.OperatorNameOnLicence[0]);
-    // }
-
     index[operator.$.id] = {
       OperatorCode: operator.OperatorCode[0],
       OperatorShortName: operator.OperatorShortName[0],
@@ -327,12 +306,8 @@ export class TransXChangeStream extends Transform {
       OperationalBlockNumber: vehicle.Operational && vehicle.Operational[0].Block ?
           vehicle.Operational[0].Block[0].BlockNumber[0] :
           "",
-      TicketMachineServiceCode: vehicle.Operational && vehicle.Operational[0].TicketMachine ?
-          vehicle.Operational[0].TicketMachine[0].TicketMachineServiceCode[0] :
-          "",
-      TicketMachineJourneyCode: vehicle.Operational && vehicle.Operational[0].TicketMachine ?
-          vehicle.Operational[0].TicketMachine[0].JourneyCode[0] :
-          ""
+      TicketMachineServiceCode: "",
+      TicketMachineJourneyCode: ""
     };
   }
 
