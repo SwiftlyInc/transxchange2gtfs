@@ -153,10 +153,10 @@ export class TransXChangeJourneyStream extends Transform {
     ].join("_");
   }
 
-  private getStopTimes(timingLinks: TimingLink[], departureTime: LocalTime): StopTime[] {
+  private getStopTimes(timingLinks: TimingLink[], vehicleDepartureTime: LocalTime): StopTime[] {
     const stopTimes = [];
     let previousTimingLink: TimingLink = timingLinks[0];
-    let previousDepartureTime = Duration.between(LocalTime.parse("00:00"), departureTime);
+    let previousDepartureTime = Duration.between(LocalTime.parse("00:00"), vehicleDepartureTime);
     let durationZero = Duration.of(0, ChronoUnit.SECONDS);
 
     for (let i in timingLinks) {
@@ -202,21 +202,21 @@ export class TransXChangeJourneyStream extends Transform {
       previousTimingLink = currentTimingLink;
     }
 
-    let lastTimingLink = timingLinks[timingLinks.length-1];
+    let lastTimingLink = timingLinks[timingLinks.length - 1];
 
     // Current arrival time is the previous departure time + previous run time + previous wait time if any
-    const arrivalTime = previousDepartureTime
+    const arrivalTimeLast = previousDepartureTime
         .plusDuration(previousTimingLink.RunTime)
         .plusDuration(previousTimingLink.To.WaitTime || durationZero);
 
     // NOTE: this is really the current departure time being tracked by previousDepartureTime
     // Current departure time + current wait time
-    previousDepartureTime = arrivalTime
+    previousDepartureTime = arrivalTimeLast
         .plusDuration(lastTimingLink.From.WaitTime || durationZero);
 
     let lastStopTime = {
       stop: lastTimingLink.To.StopPointRef,
-      arrivalTime: this.getTime(arrivalTime),
+      arrivalTime: this.getTime(arrivalTimeLast),
       departureTime: this.getTime(previousDepartureTime),
       pickup: lastTimingLink.To.Activity === StopActivity.PickUp || lastTimingLink.To.Activity === StopActivity.PickUpAndSetDown,
       dropoff: lastTimingLink.To.Activity === StopActivity.SetDown || lastTimingLink.To.Activity === StopActivity.PickUpAndSetDown,

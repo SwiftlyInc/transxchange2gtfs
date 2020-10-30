@@ -1,8 +1,6 @@
 import {TransXChange, StopPoint} from "../transxchange/TransXChange";
 import {ATCOCode, NaPTANIndex} from "../reference/NaPTAN";
 import {GTFSFileStream} from "./GTFSFileStream";
-// Used for Easting/Northing -> Longitude/Latitude conversion
-import proj4 = require("proj4");
 
 export class StopsStream extends GTFSFileStream<TransXChange> {
   protected header = "stop_id,stop_code,stop_name,stop_desc,stop_lat,stop_lon,zone_id,stop_url,location_type,parent_station,stop_timezone,wheelchair_boarding";
@@ -35,36 +33,8 @@ export class StopsStream extends GTFSFileStream<TransXChange> {
   }
 
   private getFeedStop(stop: StopPoint): string {
-    const lat = StopsStream.getLat(stop.Location);
-    const lon = StopsStream.getLon(stop.Location);
     const stopName = stop.CommonName + (stop.LocalityQualifier ? ", " + stop.LocalityQualifier : "");
-    return `"${stop.StopPointRef}","${stop.StopPointRef}","${stopName}",,${lat},${lon},,,,,,0`;
-  }
-
-  private static getLat(location: any): number {
-    if (location.Latitude) {
-      return Number(location.Latitude);
-    }
-
-    if (location.Northing && location.Easting) {
-      return proj4("EPSG:27700", "+proj=longlat +ellps=WGS84 +datum=WGS84 +no_defs",
-          [Number(location.Easting), Number(location.Northing)])[1];
-    }
-
-    return 0.0;
-  }
-
-  private static getLon(location: any): number {
-    if (location.Longitude) {
-      return Number(location.Longitude);
-    }
-
-    if (location.Northing && location.Easting) {
-      return proj4("EPSG:27700", "+proj=longlat +ellps=WGS84 +datum=WGS84 +no_defs",
-          [Number(location.Easting), Number(location.Northing)])[0];
-    }
-
-    return 0.0;
+    return `"${stop.StopPointRef}","${stop.StopPointRef}","${stopName}",,${stop.Location.Latitude},${stop.Location.Longitude},,,,,,0`;
   }
 
   /**

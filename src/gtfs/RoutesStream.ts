@@ -41,8 +41,8 @@ export class RoutesStream extends GTFSFileStream<TransXChange> {
   private getRouteLongName(service: Service): string {
     const lineName = Object.values(service.Lines)[0].trim();
 
-    if ((service.ServiceOrigin.trim().toLowerCase() === 'origin' ||
-        service.ServiceDestination.trim().toLowerCase() === 'destination') && service.Via !== "") {
+    if ((service.ServiceOrigin.trim().toLowerCase() === "origin" ||
+        service.ServiceDestination.trim().toLowerCase() === "destination") && service.Via !== "") {
       return service.Via;
 
     }

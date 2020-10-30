@@ -17,8 +17,6 @@ import {
 import {Transform, TransformCallback} from "stream";
 import autobind from "autobind-decorator";
 import {Duration, LocalDate, LocalTime} from "js-joda";
-// Used for Easting/Northing -> Longitude/Latitude conversion
-import proj4 = require("proj4");
 
 /**
  * Transforms JSON objects into a TransXChange objects
@@ -28,8 +26,6 @@ export class TransXChangeStream extends Transform {
 
   constructor() {
     super({ objectMode: true });
-    proj4.defs("EPSG:27700",
-        "+proj=tmerc +lat_0=49 +lon_0=-2 +k=0.9996012717 +x_0=400000 +y_0=-100000 +ellps=airy +towgs84=446.448,-125.157,542.06,0.15,0.247,0.842,-20.489 +units=m +no_defs");
   }
 
   /**
@@ -56,116 +52,26 @@ export class TransXChangeStream extends Transform {
       Routes: tx.Routes[0],
       RouteLinks: tx.RouteSections[0].RouteSection.map((rs: any) => {
 
-        // !!!! NOTE !!!!
-        //
-        //                                                                        [easting, northing]
-        //                                                                                 |
-        //                                                                                 |
-        //                                                                                 V
-        // proj4("EPSG:27700", "+proj=longlat +ellps=WGS84 +datum=WGS84 +no_defs", [355679, 218477]) returns
-        // [ longitude, latitude ] (=== [ easting (x), northing (y) ]), not [ latitude, longitude ]
-        //
-        // !!!!!!!!!!!!!!
-        //
-        // console.log(proj4("EPSG:27700", "+proj=longlat +ellps=WGS84 +datum=WGS84 +no_defs", [355679, 218477]));
-
         const id = rs.$.id;
 
         return rs.RouteLink.map((rl: any) => {
           return rl.Track ? rl.Track[0].Mapping[0].Location.map((location: any) => {
-            const latLon = this.getLocation(location);
-
             const routeLink: RouteLink = {
               Id: id,
-              Latitude: latLon[0],
-              Longitude: latLon[1],
-              Easting: location.Easting ?
-                  Number(location.Easting[0]) :
-                  (location.Translation ? Number(location.Translation[0].Easting[0]) : 0),
-              Northing: location.Northing ?
-                  Number(location.Northing[0]) :
-                  (location.Translation ? Number(location.Translation[0].Northing[0]) : 0)
+              Latitude: location.Latitude[0],
+              Longitude: location.Longitude[0]
             };
 
             return routeLink;
-          }) : {}
-        })
-      }).reduce((acc: any, data: any) => acc.concat(data), [])
-          .reduce((acc: any, data: any) => acc.concat(data), [])
+          }) : {};
+        });
+      }).reduce((acc: any, rls: any) => acc.concat(rls), [])
+          .reduce((acc: any, rls: any) => acc.concat(rls), [])
           .filter((l: any) => l.Id)
       // TODO: this ^^^ is not the best use of `reduce()`...
     };
 
     callback(undefined, result);
-  }
-
-  private getLocation(location: any): [number, number] {
-    const lat = this.getLat(location);
-    const lon = this.getLon(location);
-    return [ lat, lon ];
-  }
-
-  private getLat(location: any): number {
-    if (location.Latitude) {
-      return Number(location.Latitude[0]);
-    }
-
-    if (location.Translation && location.Translation[0].Latitude) {
-      return Number(location.Translation[0].Latitude[0]);
-    }
-
-    if (location.Northing && location.Easting) {
-      return proj4("EPSG:27700", "+proj=longlat +ellps=WGS84 +datum=WGS84 +no_defs",
-          [Number(location.Easting[0]), Number(location.Northing[0])])[1];
-    }
-
-    if (location.Translation && (location.Translation[0].Northing && location.Translation[0].Easting)) {
-      return proj4("EPSG:27700", "+proj=longlat +ellps=WGS84 +datum=WGS84 +no_defs",
-          [Number(location.Translation[0].Easting[0]), Number(location.Translation[0].Northing[0])])[1];
-    }
-
-    return 0.0;
-  }
-
-  private getLon(location: any): number {
-    if (location.Longitude) {
-      return Number(location.Longitude[0]);
-    }
-
-    if (location.Translation && location.Translation[0].Longitude) {
-      return Number(location.Translation[0].Longitude[0]);
-    }
-
-    if (location.Northing && location.Easting) {
-      return proj4("EPSG:27700", "+proj=longlat +ellps=WGS84 +datum=WGS84 +no_defs",
-          [Number(location.Easting[0]), Number(location.Northing[0])])[0];
-    }
-
-    if (location.Translation && (location.Translation[0].Northing && location.Translation[0].Easting)) {
-      return proj4("EPSG:27700", "+proj=longlat +ellps=WGS84 +datum=WGS84 +no_defs",
-          [Number(location.Translation[0].Easting[0]), Number(location.Translation[0].Northing[0])])[0];
-    }
-
-    return 0.0;
-  }
-
-  private convertLocation(location: any): ({ lat: number, lon: number }) {
-      const projectionEpsg27700 = "EPSG:27700";
-      const toProjection = "+proj=longlat +ellps=WGS84 +datum=WGS84 +no_defs";
-
-      if (location.Northing && location.Easting) {
-          let arr = proj4(projectionEpsg27700, toProjection,
-              [Number(location.Easting[0]), Number(location.Northing[0])]);
-          return { lon: arr[0], lat: arr[1] };
-      }
-
-      if (location.Translation && (location.Translation[0].Northing && location.Translation[0].Easting)) {
-          let arr = proj4(projectionEpsg27700, toProjection,
-              [Number(location.Translation[0].Easting[0]), Number(location.Translation[0].Northing[0])]);
-          return { lon: arr[0], lat: arr[1] };
-      }
-
-      return { lon: 0.0, lat: 0.0 };
   }
 
   private getAnnotatedStop(stop: any): StopPoint {
@@ -176,9 +82,7 @@ export class TransXChangeStream extends Transform {
       LocalityQualifier: stop.LocalityQualifier ? stop.LocalityQualifier[0] : "",
       Location: {
         Latitude: stop.Location && stop.Location[0].Latitude ? Number(stop.Location[0].Latitude[0]) : 0.0,
-        Longitude: stop.Location && stop.Location[0].Longitude ? Number(stop.Location[0].Longitude[0]) : 0.0,
-        Easting: stop.Location && stop.Location[0].Easting ? Number(stop.Location[0].Easting[0]) : 0.0,
-        Northing: stop.Location && stop.Location[0].Northing ? Number(stop.Location[0].Northing[0]) : 0.0
+        Longitude: stop.Location && stop.Location[0].Longitude ? Number(stop.Location[0].Longitude[0]) : 0.0
       }
     };
   }
@@ -191,9 +95,7 @@ export class TransXChangeStream extends Transform {
       LocalityQualifier: stop.Place[0].NptgLocalityRef[0],
       Location: {
         Latitude: stop.Location && stop.Location[0].Latitude ? Number(stop.Location[0].Latitude[0]) : 0.0,
-        Longitude: stop.Location && stop.Location[0].Longitude ? Number(stop.Location[0].Longitude[0]) : 0.0,
-        Easting: stop.Location && stop.Location[0].Easting ? Number(stop.Location[0].Easting[0]) : 0.0,
-        Northing: stop.Location && stop.Location[0].Northing ? Number(stop.Location[0].Northing[0]) : 0.0
+        Longitude: stop.Location && stop.Location[0].Longitude ? Number(stop.Location[0].Longitude[0]) : 0.0
       }
     };
   }
@@ -233,11 +135,11 @@ export class TransXChangeStream extends Transform {
 
   private getOperatorNameOnLicense(op: any): string {
     if (op.OperatorNameOnLicence) {
-      if (op.OperatorNameOnLicence[0] === 'object') {
+      if (op.OperatorNameOnLicence[0] === "object") {
         return op.OperatorNameOnLicence[0]._;
       }
 
-      if ((typeof op.OperatorNameOnLicence[0]) === 'string') {
+      if ((typeof op.OperatorNameOnLicence[0]) === "string") {
         return op.OperatorNameOnLicence[0];
       }
     }
@@ -289,8 +191,6 @@ export class TransXChangeStream extends Transform {
   }
 
   private getVehicleJourney(vehicle: any, index: JourneyPatternIndex, services: Services): VehicleJourney {
-    // console.log(vehicle);
-
     return {
       PrivateCode: vehicle.PrivateCode[0],
       LineRef: vehicle.LineRef[0],

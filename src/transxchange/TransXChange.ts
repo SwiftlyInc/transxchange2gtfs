@@ -34,9 +34,7 @@ export interface StopPoint {
   LocalityQualifier: string
   Location: {
     Latitude: number | undefined,
-    Longitude: number | undefined,
-    Easting: number | undefined,
-    Northing: number | undefined,
+    Longitude: number | undefined
   }
 }
 
@@ -162,10 +160,8 @@ export enum Mode {
 
 export interface RouteLink {
   Id: string,
-  Latitude: number | undefined,
-  Longitude: number | undefined,
-  Easting: number | undefined,
-  Northing: number | undefined,
+  Latitude: number,
+  Longitude: number
 }
 
 /**

@@ -33,8 +33,8 @@ export abstract class GTFSFileStream<T> extends Transform {
   /**
    * Add a new line to whatever is being pushed
    */
-  public pushLine(data: string | null, encoding?: string): boolean {
-    return this.push(data + "\n", encoding);
+  public pushLine(data: string | null): boolean {
+    return this.push(data + "\n");
   }
 
 }
