@@ -37,9 +37,7 @@ export class TransXChangeStream extends Transform {
     const services = tx.Services[0].Service.reduce(this.getServices, {});
 
     const result: TransXChange = {
-      StopPoints: tx.StopPoints[0].AnnotatedStopPointRef ?
-          tx.StopPoints[0].AnnotatedStopPointRef.map(this.getAnnotatedStop) :
-          (tx.StopPoints[0].StopPoint ? tx.StopPoints[0].StopPoint.map(this.getStop) : {}),
+      StopPoints: tx.StopPoints[0].AnnotatedStopPointRef.map(this.getStop),
       JourneySections: tx.JourneyPatternSections[0].JourneyPatternSection.reduce(this.getJourneySections, {}),
       Operators: tx.Operators[0].Operator ?
           tx.Operators[0].Operator.reduce(this.getOperators, {}) :
@@ -58,8 +56,8 @@ export class TransXChangeStream extends Transform {
           return rl.Track ? rl.Track[0].Mapping[0].Location.map((location: any) => {
             const routeLink: RouteLink = {
               Id: id,
-              Latitude: location.Latitude[0],
-              Longitude: location.Longitude[0]
+              Latitude: location.Translation[0].Latitude[0],
+              Longitude: location.Translation[0].Longitude[0]
             };
 
             return routeLink;
@@ -74,25 +72,12 @@ export class TransXChangeStream extends Transform {
     callback(undefined, result);
   }
 
-  private getAnnotatedStop(stop: any): StopPoint {
+  private getStop(stop: any): StopPoint {
     return {
       StopPointRef: stop.StopPointRef[0],
       CommonName: stop.CommonName[0],
       LocalityName: stop.LocalityName ? stop.LocalityName[0] : "",
       LocalityQualifier: stop.LocalityQualifier ? stop.LocalityQualifier[0] : "",
-      Location: {
-        Latitude: stop.Location && stop.Location[0].Latitude ? Number(stop.Location[0].Latitude[0]) : 0.0,
-        Longitude: stop.Location && stop.Location[0].Longitude ? Number(stop.Location[0].Longitude[0]) : 0.0
-      }
-    };
-  }
-
-  private getStop(stop: any): StopPoint {
-    return {
-      StopPointRef: stop.AtcoCode[0],
-      CommonName: stop.Descriptor[0].CommonName[0],
-      LocalityName: stop.Place[0].NptgLocalityRef[0],
-      LocalityQualifier: stop.Place[0].NptgLocalityRef[0],
       Location: {
         Latitude: stop.Location && stop.Location[0].Latitude ? Number(stop.Location[0].Latitude[0]) : 0.0,
         Longitude: stop.Location && stop.Location[0].Longitude ? Number(stop.Location[0].Longitude[0]) : 0.0

@@ -33,8 +33,8 @@ export interface StopPoint {
   LocalityName: string,
   LocalityQualifier: string
   Location: {
-    Latitude: number | undefined,
-    Longitude: number | undefined
+    Latitude: number,
+    Longitude: number
   }
 }
 
