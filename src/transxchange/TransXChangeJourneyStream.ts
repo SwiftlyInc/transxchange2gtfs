@@ -23,9 +23,6 @@ export class TransXChangeJourneyStream extends Transform {
    */
   public _transform(schedule: TransXChange, encoding: string, callback: TransformCallback): void {
     for (const vehicle of schedule.VehicleJourneys) {
-      // if (vehicle.ServiceRef === 'SER3') {
-      //   console.log(vehicle)
-      // }
       const service = schedule.Services[vehicle.ServiceRef];
       const journeyPattern = service.StandardService[vehicle.JourneyPatternRef];
       const sections = journeyPattern.Sections.reduce(
@@ -36,17 +33,7 @@ export class TransXChangeJourneyStream extends Transform {
       if (sections.length > 0) {
         const calendar = this.getCalendar(vehicle.OperatingProfile, schedule.Services[vehicle.ServiceRef]);
         const stops = this.getStopTimes(sections, vehicle.DepartureTime);
-        const days: DaysOfWeek = vehicle.OperatingProfile.RegularDayType === "HolidaysOnly"
-            ? [0, 0, 0, 0, 0, 0, 0]
-            : this.mergeDays(vehicle.OperatingProfile.RegularDayType);
         // Old way of constructing trip IDs by incrementation, starting at 1
-        //
-        // const trip = {
-        //   id: this.tripId++,
-        //   shortName: service.ServiceDestination,
-        //   direction: journeyPattern.Direction
-        // };
-
         // new way of constructing trip IDs by combining service code, journey code, and private code
         const trip = {
           id: "\"" + vehicle.TicketMachineServiceCode + "-" +
