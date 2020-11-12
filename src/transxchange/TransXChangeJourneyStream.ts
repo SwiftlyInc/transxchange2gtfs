@@ -33,13 +33,11 @@ export class TransXChangeJourneyStream extends Transform {
       if (sections.length > 0) {
         const calendar = this.getCalendar(vehicle.OperatingProfile, schedule.Services[vehicle.ServiceRef]);
         const stops = this.getStopTimes(sections, vehicle.DepartureTime);
-        // Old way of constructing trip IDs by incrementation, starting at 1
-        // new way of constructing trip IDs by combining service code, journey code, and private code
+        const shortName = `${service.Lines[vehicle.LineRef]}-${journeyPattern.Direction}-${vehicle.TicketMachineJourneyCode}`;
         const trip = {
-          id: "\"" + vehicle.TicketMachineServiceCode + "-" +
-              vehicle.TicketMachineJourneyCode + "-" +
-              vehicle.PrivateCode.replace(/:/g, "") + "\"",
-          shortName: service.ServiceDestination,
+          id: `${vehicle.PrivateCode}`,
+          shortName: shortName,
+          headSign: service.ServiceDestination,
           direction: journeyPattern.Direction
         };
         const route = vehicle.ServiceRef;
