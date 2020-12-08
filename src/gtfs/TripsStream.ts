@@ -27,7 +27,7 @@ export class TripsStream extends GTFSFileStream<TransXChangeJourney> {
           journey.trip.direction === "outbound" ? 0 : 1,
           0,
           0,
-          journey.route + journey.shapeId,
+          journey.shapeId,
           journey.blockId
       ].join());
   }

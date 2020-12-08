@@ -10,7 +10,7 @@ export class ShapesStream extends GTFSFileStream<TransXChange> {
         for (const k in data.RouteLinks) {
             const routeLink = data.RouteLinks[k];
             // Make shape IDs more unique by concatenating service code (route ID) and route link ID.
-            this.pushLine(`${serviceCode + routeLink.Id},${routeLink.Latitude},${routeLink.Longitude},${Number(k) + 1}`);
+            this.pushLine(`${routeLink.Id},${routeLink.Latitude},${routeLink.Longitude},${Number(k) + 1}`);
         }
     }
 }
