@@ -32,7 +32,7 @@ export interface StopPoint {
   CommonName: string,
   LocalityName: string,
   LocalityQualifier: string
-  Location: {
+  Location?: {
     Latitude: number,
     Longitude: number
   }

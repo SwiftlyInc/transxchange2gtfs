@@ -34,6 +34,7 @@ export class StopsStream extends GTFSFileStream<TransXChange> {
 
   private getFeedStop(stop: StopPoint): string {
     const stopName = stop.CommonName + (stop.LocalityQualifier ? ", " + stop.LocalityQualifier : "");
+    if (!stop.Location) throw Error(`${stop.CommonName} (${stop.StopPointRef}) is missing its location!`);
     return `"${stop.StopPointRef}","${stop.StopPointRef}","${stopName}",,${stop.Location.Latitude},${stop.Location.Longitude},,,,,,0`;
   }
 

@@ -78,12 +78,19 @@ export class TransXChangeStream extends Transform {
       CommonName: stop.CommonName[0],
       LocalityName: stop.LocalityName ? stop.LocalityName[0] : "",
       LocalityQualifier: stop.LocalityQualifier ? stop.LocalityQualifier[0] : "",
-      Location: {
-        Latitude: stop.Location && stop.Location[0].Latitude ? Number(stop.Location[0].Latitude[0]) : 0.0,
-        Longitude: stop.Location && stop.Location[0].Longitude ? Number(stop.Location[0].Longitude[0]) : 0.0
-      }
+      Location: this.getLocationFromStop(stop)
     };
   }
+
+  private getLocationFromStop(stop: any) {
+    if (stop.Location?.[0]?.Latitude?.[0] && stop.Location?.[0]?.Longitude?.[0])
+      return {
+        Latitude: stop.Location[0].Latitude[0],
+        Longitude: stop.Location[0].Longitude[0]
+      };
+    else return undefined;
+  }
+
 
   private getJourneySections(index: JourneyPatternSections, section: any): JourneyPatternSections {
     index[section.$.id] = section.JourneyPatternTimingLink ? section.JourneyPatternTimingLink.map(this.getLink) : [];
