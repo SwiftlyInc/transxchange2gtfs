@@ -199,7 +199,7 @@ export class TransXChangeStream extends Transform {
           vehicle.Operational[0].Block[0].BlockNumber[0] :
           "",
       TicketMachineServiceCode: "",
-      TicketMachineJourneyCode: vehicle.Operational[0]?.TicketMachine?.[0]?.JourneyCode
+      TicketMachineJourneyCode: vehicle.Operational?.[0]?.TicketMachine?.[0]?.JourneyCode
     };
   }
 
