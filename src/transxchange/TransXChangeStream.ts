@@ -327,7 +327,7 @@ export class TransXChangeStream extends Transform {
       OperationalBlockNumber: vehicle.Operational && vehicle.Operational[0].Block ?
           vehicle.Operational[0].Block[0].BlockNumber[0] :
           "",
-      TicketMachineServiceCode: vehicle.Operational && vehicle.Operational[0].TicketMachine ?
+      TicketMachineServiceCode: vehicle.Operational && vehicle.Operational[0].TicketMachine && vehicle.Operational[0].TicketMachine[0].TicketMachineServiceCode ?
           vehicle.Operational[0].TicketMachine[0].TicketMachineServiceCode[0] :
           "",
       TicketMachineJourneyCode: vehicle.Operational && vehicle.Operational[0].TicketMachine ?
